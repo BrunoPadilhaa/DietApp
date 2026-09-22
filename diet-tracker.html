@@ -1,0 +1,884 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Diet Points</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F1F5F1;
+    --surface: #FFFFFF;
+    --surface-2: #E6ECE6;
+    --line: #D5DED6;
+    --grid: #E1E8E2;
+    --ink: #14211A;
+    --muted: #5F7166;
+    --good: #1B8A4B;
+    --good-soft: #DDF1E4;
+    --bad: #C4372C;
+    --bad-soft: #FADFDB;
+    --warn: #B7791A;
+    --water: #2B7BB8;
+    --focus: #14211A;
+    --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+    --body: "DM Sans", "Segoe UI", system-ui, sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0E1611; --surface: #16211A; --surface-2: #1F2D24; --line: #2A3A30; --grid: #223027;
+      --ink: #E9F1EB; --muted: #8DA294; --good: #4FCB87; --good-soft: #173524; --bad: #FF7B6E; --bad-soft: #3A1F1C;
+      --warn: #E6B052; --water: #6DB4EA; --focus: #E9F1EB;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0E1611; --surface: #16211A; --surface-2: #1F2D24; --line: #2A3A30; --grid: #223027;
+    --ink: #E9F1EB; --muted: #8DA294; --good: #4FCB87; --good-soft: #173524; --bad: #FF7B6E; --bad-soft: #3A1F1C;
+    --warn: #E6B052; --water: #6DB4EA; --focus: #E9F1EB;
+    color-scheme: dark;
+  }
+
+  html, body { background: var(--bg); }
+  body {
+    margin: 0; color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.4;
+    padding-inline: 16px; padding-block: 20px 110px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .app { max-width: 460px; margin-inline: auto; display: flex; flex-direction: column; gap: 22px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:disabled { opacity: .35; cursor: default; }
+  button:focus-visible, input:focus-visible, [data-pk]:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .num { font-variant-numeric: tabular-nums; }
+  .pos { color: var(--good); } .neg { color: var(--bad); } .mid { color: var(--warn); }
+  h2 { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+  .hint { font-size: 13px; color: var(--muted); }
+
+  /* bottom tabs */
+  .tabbar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: 6px 16px calc(6px + env(safe-area-inset-bottom, 0px)); z-index: 5; }
+  .tabs { max-width: 460px; margin-inline: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 52px; padding: 6px 0; border: 0; background: transparent; color: var(--muted); font-size: 12px; font-weight: 500; border-radius: 12px; }
+  .tab svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .tab[aria-pressed="true"] { color: var(--ink); font-weight: 700; background: var(--surface-2); }
+
+  /* week strip */
+  .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .day { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0; border: 1.5px solid transparent; border-radius: 12px; background: transparent; min-height: 64px; }
+  .day .dow { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .day .dom { font-size: 15px; font-weight: 500; }
+  .day .pts { font-size: 13px; font-weight: 700; color: var(--muted); }
+  .day .pts.pos { color: var(--good); } .day .pts.neg { color: var(--bad); } .day .pts.mid { color: var(--warn); }
+  .day[aria-pressed="true"] { background: var(--surface); border-color: var(--ink); }
+
+  /* segmented */
+  .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; background: var(--surface-2); border-radius: 14px; }
+  .seg button { min-height: 44px; border: 0; border-radius: 10px; background: transparent; font-weight: 500; color: var(--muted); white-space: nowrap; font-size: 14px; padding-inline: 4px; }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 700; box-shadow: 0 0 0 1.5px var(--ink); }
+
+  /* hero */
+  .hero { display: flex; flex-direction: column; gap: 2px; padding-block: 4px; }
+  .hero .label { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+  .hero .score { font-family: var(--display); font-weight: 800; font-size: 104px; line-height: .95; letter-spacing: -.03em; }
+  .hero .score .pc { font-size: .42em; letter-spacing: 0; margin-left: 4px; }
+  .hero .state { font-size: 15px; color: var(--muted); }
+  .hero.small .score { font-size: 72px; }
+
+  /* meals */
+  .meals { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .meals .meal:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .meal { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 62px; padding: 10px 12px 10px 14px; text-align: left; background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px; transition: transform .08s ease; }
+  .meal:active { transform: scale(.97); }
+  .meal .name { font-weight: 700; }
+  .meal .sub { display: block; font-size: 12px; color: var(--muted); font-weight: 400; }
+  .meal.done { background: var(--good-soft); border-color: var(--good); }
+  .badge { flex: none; font-family: var(--display); font-weight: 800; font-size: 15px; padding: 4px 9px; border-radius: 999px; background: var(--good-soft); color: var(--good); }
+  .badge.bad { background: var(--bad-soft); color: var(--bad); }
+  .meal.done .badge { background: var(--good); color: var(--surface); }
+
+  /* penalties */
+  .pen { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .pen-btn { min-height: 56px; padding: 10px 12px 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; background: transparent; border: 1.5px dashed var(--bad); border-radius: 14px; color: var(--bad); font-weight: 700; }
+  .slip-form { margin-top: 10px; padding: 14px; background: var(--surface); border: 1.5px solid var(--bad); border-radius: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .slip-form .title { font-weight: 700; color: var(--bad); }
+  .field { font: inherit; color: var(--ink); background: var(--bg); border: 1.5px solid var(--line); border-radius: 10px; padding: 12px; min-height: 48px; width: 100%; box-sizing: border-box; }
+  .row { display: flex; gap: 10px; align-items: center; }
+  .btn { flex: 1; min-height: 48px; border-radius: 10px; border: 1.5px solid var(--line); background: transparent; font-weight: 700; }
+  .btn.primary { background: var(--bad); border-color: var(--bad); color: #fff; }
+  .btn.ink { background: var(--ink); border-color: var(--ink); color: var(--bg); flex: none; padding-inline: 20px; }
+
+  /* water + weight */
+  .panel { background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+  .w-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .w-val { font-family: var(--display); font-weight: 800; font-size: 34px; letter-spacing: -.02em; }
+  .w-val small { font-family: var(--body); font-weight: 500; font-size: 15px; color: var(--muted); letter-spacing: 0; }
+  .link { border: 0; background: transparent; color: var(--muted); text-decoration: underline; min-height: 44px; padding-inline: 4px; }
+  .meter { height: 10px; border-radius: 5px; background: var(--surface-2); overflow: hidden; }
+  .meter > span { display: block; height: 100%; border-radius: 5px; background: var(--water); }
+  .meter.full > span { background: var(--good); }
+  .w-btns { display: grid; grid-template-columns: 1fr 1.4fr 1.4fr; gap: 8px; }
+  .w-btns button { min-height: 48px; border-radius: 10px; border: 1.5px solid var(--line); background: transparent; font-weight: 700; }
+  .w-btns button.add { border-color: var(--water); color: var(--water); }
+  .unit { color: var(--muted); font-weight: 500; }
+  .err { color: var(--bad); font-size: 13px; }
+
+  /* log */
+  .log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .log li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .log li:last-child { border-bottom: 0; }
+  .log .what { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .log .when { font-size: 13px; color: var(--muted); }
+  .rm { flex: none; width: 44px; height: 44px; border-radius: 10px; border: 0; background: transparent; color: var(--muted); font-size: 20px; line-height: 1; }
+  .empty { color: var(--muted); padding-block: 8px; }
+
+  .totals { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .total { background: var(--surface-2); border-radius: 14px; padding: 12px 14px; }
+  .total .k { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .total .v { font-family: var(--display); font-weight: 800; font-size: 28px; }
+  .foot { font-size: 12px; color: var(--muted); text-align: center; }
+
+  /* progress */
+  .pnav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .pnav button { width: 48px; height: 48px; border-radius: 12px; border: 1.5px solid var(--line); background: transparent; font-size: 22px; line-height: 1; }
+  .pnav .plabel { text-align: center; font-weight: 700; }
+  .pnav .plabel small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+  .delta { font-size: 14px; font-weight: 700; }
+  .stats3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stat { background: var(--surface-2); border-radius: 14px; padding: 10px 12px; }
+  .stat .k { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .stat .v { font-family: var(--display); font-weight: 800; font-size: 24px; }
+  .stat .v small { font-family: var(--body); font-weight: 400; font-size: 13px; color: var(--muted); }
+  .chartbox { background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px; padding: 12px 8px 10px; }
+  svg.chart { display: block; width: 100%; height: auto; }
+  svg.chart .grid { stroke: var(--grid); stroke-width: 1; }
+  svg.chart .ax { fill: var(--muted); font-size: 10px; font-family: var(--body); }
+  svg.chart .b-good { fill: var(--good); } svg.chart .b-mid { fill: var(--warn); } svg.chart .b-bad { fill: var(--bad); }
+  svg.chart .b-water { fill: var(--water); }
+  svg.chart .b-none { fill: var(--grid); }
+  svg.chart .hit { fill: transparent; pointer-events: all; cursor: pointer; }
+  svg.chart .goal { stroke: var(--water); stroke-width: 1; }
+  svg.chart .wline { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  svg.chart .wdot { fill: var(--ink); stroke: var(--surface); stroke-width: 2; }
+  svg.chart .wlab { fill: var(--ink); font-size: 11px; font-weight: 700; font-family: var(--body); }
+  .readout { font-size: 13px; color: var(--muted); text-align: center; min-height: 20px; padding-top: 4px; }
+  .adh { display: grid; grid-template-columns: 118px 1fr 44px; align-items: center; gap: 10px; padding-block: 6px; }
+  .adh .an { font-size: 14px; }
+  .adh .av { text-align: right; font-weight: 700; font-size: 14px; }
+  .track { height: 10px; border-radius: 5px; background: var(--surface-2); overflow: hidden; }
+  .track > span { display: block; height: 100%; border-radius: 5px; }
+  .track .f-good { background: var(--good); } .track .f-mid { background: var(--warn); } .track .f-bad { background: var(--bad); }
+  .sub2 { font-size: 12px; color: var(--muted); }
+  .hl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .hl li { padding: 10px 12px; background: var(--surface-2); border-radius: 12px; font-size: 14px; }
+  .kv { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 8px; }
+  .kv div { font-size: 13px; color: var(--muted); }
+  .kv b { display: block; font-size: 20px; color: var(--ink); font-family: var(--display); }
+
+  /* day navigation */
+  .dnav { display: flex; gap: 8px; align-items: center; }
+  .dnav button { flex: none; width: 44px; height: 44px; border-radius: 12px; border: 1.5px solid var(--line); background: transparent; font-size: 22px; line-height: 1; }
+  .dnav button.todaybtn { width: auto; padding-inline: 14px; font-size: 14px; font-weight: 700; }
+  .dnav .field { flex: 1; min-width: 0; min-height: 44px; padding: 8px 10px; text-align: center; font-weight: 700; }
+  .opendayrow { display: flex; justify-content: center; padding-top: 6px; }
+
+  /* line charts */
+  svg.chart .ln { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  svg.chart .ln-water { stroke: var(--water); } svg.chart .ln-ink { stroke: var(--ink); }
+  svg.chart .dt { stroke: var(--surface); stroke-width: 2; }
+  svg.chart .dt-water { fill: var(--water); } svg.chart .dt-ink { fill: var(--ink); }
+  svg.chart .pick { stroke: var(--muted); stroke-width: 1; }
+  svg.chart .lab { font-size: 11px; font-weight: 700; font-family: var(--body); fill: var(--ink); }
+
+  /* heatmap */
+  .hmhead, .hmgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .hmhead { margin-bottom: 5px; }
+  .hmhead span { text-align: center; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .hm { min-height: 50px; padding: 4px 0; border: 0; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; background: var(--surface-2); color: var(--ink); }
+  .hm i { font-style: normal; font-size: 10px; opacity: .75; line-height: 1; }
+  .hm b { font-size: 13px; line-height: 1.1; }
+  .hm.none { color: var(--muted); }
+  .hm.none.fut { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+  .hm.sel { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .hm.hm-good { background: var(--good); color: var(--surface); } .hm.hm-bad { background: var(--bad); color: var(--surface); }
+  .hmblank { min-height: 50px; }
+  .hmlegend { margin-top: 12px; display: grid; gap: 4px; }
+  .hmlegend .bars { display: flex; gap: 3px; height: 10px; }
+  .hmlegend .bars span { display: block; height: 100%; border-radius: 5px; }
+  .hmlegend .bars .r { flex: 70; background: linear-gradient(90deg, var(--bad), color-mix(in srgb, var(--bad) 22%, var(--surface-2))); }
+  .hmlegend .bars .g { flex: 30; background: linear-gradient(90deg, color-mix(in srgb, var(--good) 22%, var(--surface-2)), var(--good)); }
+  .hmlegend .ticks { display: flex; font-size: 11px; color: var(--muted); }
+  .hmlegend .ticks span:nth-child(1) { flex: 70; display: flex; justify-content: space-between; } .hmlegend .ticks span:nth-child(2) { flex: 30; text-align: right; }
+  .hmlegend .ticks em { font-style: normal; }
+
+  /* weigh-in list */
+  .wl { list-style: none; margin: 10px 0 0; padding: 0; }
+  .wl li { border-top: 1px solid var(--line); padding: 8px 0; display: flex; flex-direction: column; gap: 8px; }
+  .wl .wrow { display: flex; align-items: center; gap: 10px; }
+  .wl .wd { flex: 1; font-size: 14px; }
+  .wl .wv { font-weight: 700; }
+  .wl .wv.ex { text-decoration: line-through; color: var(--muted); }
+  .tag { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
+  .mini { min-height: 40px; padding-inline: 14px; border-radius: 10px; border: 1.5px solid var(--line); background: transparent; font-weight: 700; font-size: 14px; }
+  .mini.danger { border-color: var(--bad); color: var(--bad); }
+  .wl .wedit { display: flex; flex-direction: column; gap: 10px; }
+  .wl .wedit .row .field { flex: 1; }
+
+  @media (prefers-reduced-motion: reduce) { .meal { transition: none; } }
+</style></head>
+<body>
+
+
+<main class="app" id="app" aria-live="polite"></main>
+
+<script>
+(function () {
+  // ---------- scoring rules (edit here) ----------
+  var DAY_TYPES = {
+    workout: { name: "Workout",     slots: ["Breakfast", "Pre-workout", "Lunch", "Snack", "Dinner", "Bedtime meal"] },
+    rest:    { name: "Non-workout", slots: ["Breakfast", "Lunch", "Snack", "Dinner", "Bedtime meal"] },
+    cheat:   { name: "Cheat",       slots: ["Pre-workout", "Lunch", "Snack", "Free meal"] }
+  };
+  var TYPE_ORDER = ["workout", "rest", "cheat"];
+  var SLOT_ORDER = ["Breakfast", "Pre-workout", "Lunch", "Snack", "Dinner", "Bedtime meal", "Free meal"];
+  var SLOT_NOTE = { "Pre-workout": "no fixed time", "Free meal": "your cheat meal" };
+  var MEAL_POINTS = 1;
+  var PENALTY = {
+    slip:    { name: "Off-diet", pts: -1 },
+    alcohol: { name: "Alcohol",  pts: -3 }
+  };
+  var DEFAULT_GOAL_ML = 2500;
+
+  var LS_KEY = "dietpoints.v2", LS_GOAL = "dietpoints.goal";
+  var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  var app = document.getElementById("app");
+
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function keyOf(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function fromKey(k) { var p = k.split("-"); return new Date(+p[0], +p[1] - 1, +p[2], 12, 0, 0); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function fmt(n) { return n > 0 ? "+" + n : n < 0 ? "−" + Math.abs(n) : "0"; }
+  function fmtL(ml) { return (ml / 1000).toFixed(2).replace(/0+$/, "").replace(/\.$/, ""); }
+  function shortDate(k) { return fromKey(k).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }); }
+
+  var days = {};
+  var waterGoal = DEFAULT_GOAL_ML;
+  var lastToday = keyOf(new Date());
+  var sel = lastToday;
+  var tab = "today", pKind = "week", pOff = 0, picked = null;
+  var penOpen = null, penDraft = "", focusId = null;
+  var goalEdit = false, goalDraft = null, weightDraft = null, weightErr = false;
+  var wEdit = null, wEditDraft = "", wEditErr = false, wDelArm = null;
+  var wRange = "30";          // weight chart range: "30" | "90" | "all"
+  var stripEnd = lastToday;   // last day shown in the Today week strip
+
+  function blank() { return { type: "workout", events: [], water: 0, weight: null }; }
+  // Always deep-copy: data delivered by the cloud store is frozen (read-only).
+  function normDay(v) {
+    var arr = Array.isArray(v);
+    var evs = arr ? v : (v && Array.isArray(v.events) ? v.events : []);
+    return {
+      type: (v && !arr && DAY_TYPES[v.type]) ? v.type : "workout",
+      events: evs.map(function (e) { return { id: e.id, t: e.t, kind: e.kind, label: (e.kind === "meal" && e.label === "Supper") ? "Bedtime meal" : e.label, pts: e.pts }; }),
+      water: (v && !arr && typeof v.water === "number" && v.water > 0) ? Math.round(v.water) : 0,
+      weight: (v && !arr && typeof v.weight === "number" && v.weight > 0) ? v.weight : null
+    };
+  }
+
+  // ---------- storage ----------
+  try {
+    var raw = localStorage.getItem(LS_KEY) || localStorage.getItem("dietpoints.v1");
+    if (raw) { var parsed = JSON.parse(raw) || {}; Object.keys(parsed).forEach(function (k) { if (DATE_RE.test(k)) days[k] = normDay(parsed[k]); }); }
+    var g = parseInt(localStorage.getItem(LS_GOAL), 10);
+    if (g >= 500 && g <= 10000) waterGoal = g;
+  } catch (e) { days = {}; }
+
+  function saveLocal() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(days)); localStorage.setItem(LS_GOAL, String(waterGoal)); } catch (e) {}
+  }
+  function persist() { saveLocal(); }
+
+  // ---------- model ----------
+  function day(key) { return days[key] || blank(); }
+  function ensure(key) { return (days[key] = days[key] || blank()); }
+  function inPlan(key, e) { return e.kind !== "meal" || DAY_TYPES[day(key).type].slots.indexOf(e.label) !== -1; }
+  // meals only count if they belong to that day's plan; penalties always count
+  function score(key) { return day(key).events.reduce(function (a, e) { return inPlan(key, e) ? a + e.pts : a; }, 0); }
+  // Day score as a percentage: (meals done - penalties) / meals in the plan
+  function pct(key) {
+    var max = DAY_TYPES[day(key).type].slots.length;
+    return Math.max(0, Math.min(100, Math.round(score(key) / max * 100)));
+  }
+  function pcls(p) { return p >= 80 ? "pos" : p < 50 ? "neg" : "mid"; }
+  function fcls(p) { return p >= 80 ? "f-good" : p < 50 ? "f-bad" : "f-mid"; }
+  function avgPct(keys) {
+    var logged = keys.filter(function (k) { return day(k).events.length; });
+    if (!logged.length) return null;
+    return Math.round(logged.reduce(function (a, k) { return a + pct(k); }, 0) / logged.length);
+  }
+  function nowFor(key, n) { return key === keyOf(new Date()) ? Date.now() : fromKey(key).getTime() + n * 1000; }
+
+  function addEvent(kind, label, pts) {
+    var d = ensure(sel);
+    d.events = d.events.concat([{ id: Math.random().toString(36).slice(2, 9), t: nowFor(sel, d.events.length), kind: kind, label: label, pts: pts }]);
+    persist(); render();
+  }
+  function removeEvent(id) { var d = ensure(sel); d.events = d.events.filter(function (e) { return e.id !== id; }); persist(); render(); }
+  function toggleMeal(slot) {
+    var d = ensure(sel);
+    var has = d.events.some(function (e) { return e.kind === "meal" && e.label === slot; });
+    if (has) { d.events = d.events.filter(function (e) { return !(e.kind === "meal" && e.label === slot); }); persist(); render(); }
+    else addEvent("meal", slot, MEAL_POINTS);
+  }
+  function setType(t) { ensure(sel).type = t; persist(); render(); }
+  function submitPenalty() {
+    var kind = penOpen, label = penDraft.trim();
+    penOpen = null; penDraft = "";
+    if (kind && PENALTY[kind]) addEvent(kind, label, PENALTY[kind].pts); else render();
+  }
+  function addWater(delta) { var d = ensure(sel); d.water = Math.max(0, (d.water || 0) + delta); persist(); render(); }
+  function saveGoal() {
+    var v = parseFloat(String(goalDraft === null ? "" : goalDraft).replace(",", "."));
+    if (isFinite(v) && v >= 0.5 && v <= 10) { waterGoal = Math.round(v * 20) * 50; saveLocal(); }
+    goalEdit = false; goalDraft = null; render();
+  }
+  function saveWeight() {
+    var s = String(weightDraft === null ? "" : weightDraft).trim().replace(",", ".");
+    var d = ensure(sel);
+    if (s === "") d.weight = null;
+    else {
+      var v = parseFloat(s);
+      if (!isFinite(v) || v < 20 || v > 400) { weightErr = true; render(); return; }
+      d.weight = Math.round(v * 10) / 10;
+    }
+    weightDraft = null; weightErr = false; persist(); render();
+  }
+  function lastWeight(upTo) {
+    var ks = Object.keys(days).filter(function (k) { return k <= upTo && days[k].weight != null; }).sort();
+    return ks.length ? { k: ks[ks.length - 1], w: days[ks[ks.length - 1]].weight } : null;
+  }
+  // edit / delete a weigh-in on any date (from the Progress tab)
+  function saveWeighEdit() {
+    var v = parseFloat(String(wEditDraft).trim().replace(",", "."));
+    if (!isFinite(v) || v < 20 || v > 400) { wEditErr = true; render(); return; }
+    var d = ensure(wEdit); d.weight = Math.round(v * 10) / 10;
+    persist(); closeWeighEdit(); render();
+  }
+  function deleteWeigh() {
+    if (wDelArm !== wEdit) { wDelArm = wEdit; render(); return; }
+    var d = ensure(wEdit); d.weight = null;
+    persist(); closeWeighEdit(); render();
+  }
+  function closeWeighEdit() { wEdit = null; wEditDraft = ""; wEditErr = false; wDelArm = null; }
+
+  function shiftKey(k, n) {
+    var d = fromKey(k); d.setDate(d.getDate() + n);
+    var r = keyOf(d), t = keyOf(new Date());
+    return r > t ? t : r;
+  }
+  // Select a day to view/edit. recenter = also move the week strip so the day is visible.
+  function selectDay(k, recenter) {
+    sel = k; penOpen = null; penDraft = ""; weightDraft = null; weightErr = false; goalEdit = false; goalDraft = null;
+    if (recenter) stripEnd = shiftKey(k, 3);
+  }
+  // days covered by the weight chart (independent of the week/month picker, so a trend shows even with sparse weigh-ins)
+  function weightKeys() {
+    var t = keyOf(new Date()), startK;
+    if (wRange === "all") {
+      var ws = Object.keys(days).filter(function (k) { return days[k].weight != null; }).sort();
+      startK = ws.length ? ws[0] : t;
+      var min = shiftKey(t, -13);
+      if (startK > min) startK = min;
+    } else startK = shiftKey(t, -(parseInt(wRange, 10) - 1));
+    var keys = [];
+    for (var d = fromKey(startK), end = fromKey(t); d <= end; d.setDate(d.getDate() + 1)) keys.push(keyOf(d));
+    return keys;
+  }
+  function openDay(k) { tab = "today"; selectDay(k, true); picked = null; closeWeighEdit(); render(); window.scrollTo(0, 0); }
+
+  // ---------- TODAY tab ----------
+  var DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  function dayLabel(key) {
+    if (key === keyOf(new Date())) return "Today";
+    var y = new Date(); y.setDate(y.getDate() - 1);
+    if (key === keyOf(y)) return "Yesterday";
+    return fromKey(key).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
+  }
+
+  function renderToday() {
+    var today = new Date(), realToday = keyOf(today), base = fromKey(stripEnd);
+    var strip = "", weekKeys = [];
+    for (var j = 6; j >= 0; j--) weekKeys.push(keyOf(new Date(today.getFullYear(), today.getMonth(), today.getDate() - j, 12)));
+    for (var i = 6; i >= 0; i--) {
+      var d = new Date(base.getFullYear(), base.getMonth(), base.getDate() - i, 12);
+      var k = keyOf(d), has = day(k).events.length > 0, p = pct(k);
+      strip += '<button class="day" data-key="' + k + '" aria-pressed="' + (k === sel) + '" aria-label="' + esc(dayLabel(k)) + (has ? ', ' + p + ' percent' : ', nothing logged') + '">' +
+        '<span class="dow">' + DOW[d.getDay()] + '</span><span class="dom num">' + d.getDate() + '</span>' +
+        '<span class="pts num ' + (has ? pcls(p) : "") + '">' + (has ? p + "%" : "·") + '</span></button>';
+    }
+
+    var cur = day(sel), type = DAY_TYPES[cur.type], slots = type.slots;
+    var eaten = {};
+    cur.events.forEach(function (e) { if (e.kind === "meal") eaten[e.label] = true; });
+    var done = slots.filter(function (s) { return eaten[s]; }).length;
+    var p = pct(sel);
+    var penalty = cur.events.reduce(function (a, e) { return e.pts < 0 ? a + e.pts : a; }, 0);
+    var mood = !cur.events.length ? "Nothing logged yet" : p === 100 ? "Perfect day" : p >= 80 ? "On track" : p >= 50 ? "Slipping" : "Off track";
+
+    var types = '<div class="seg" role="group" aria-label="Day type">' + TYPE_ORDER.map(function (t) {
+      return '<button data-type="' + t + '" aria-pressed="' + (cur.type === t) + '">' + DAY_TYPES[t].name + '</button>';
+    }).join("") + '</div>';
+
+    var meals = slots.map(function (m) {
+      var on = !!eaten[m];
+      return '<button class="meal' + (on ? " done" : "") + '" data-meal="' + esc(m) + '" aria-pressed="' + on + '">' +
+        '<span><span class="name">' + esc(m) + '</span><span class="sub">' + (on ? "on plan" : (SLOT_NOTE[m] || "tap when eaten")) + '</span></span>' +
+        '<span class="badge">' + (on ? "✓" : "+" + MEAL_POINTS) + '</span></button>';
+    }).join("");
+
+    var pen;
+    if (penOpen) {
+      var P = PENALTY[penOpen];
+      pen = '<div class="slip-form"><div class="title">' + P.name + ' · ' + fmt(P.pts) + '</div>' +
+        '<input class="field" id="pen-text" type="text" placeholder="' + (penOpen === "alcohol" ? "What did you drink? (optional)" : "What was it? (optional)") + '" maxlength="60" value="' + esc(penDraft) + '" autocomplete="off">' +
+        '<div class="row"><button class="btn" data-act="pen-cancel">Cancel</button>' +
+        '<button class="btn primary" data-act="pen-ok">Deduct ' + Math.abs(P.pts) + ' point' + (Math.abs(P.pts) > 1 ? "s" : "") + '</button></div></div>';
+    } else {
+      pen = '<div class="pen">' +
+        '<button class="pen-btn" data-pen="slip"><span>Off-diet</span><span class="badge bad">' + fmt(PENALTY.slip.pts) + '</span></button>' +
+        '<button class="pen-btn" data-pen="alcohol"><span>Alcohol</span><span class="badge bad">' + fmt(PENALTY.alcohol.pts) + '</span></button></div>';
+    }
+
+    // water
+    var ml = cur.water || 0, wp = Math.min(100, Math.round(ml / waterGoal * 100));
+    var goalForm = goalEdit
+      ? '<div class="row"><input class="field" id="goal-input" inputmode="decimal" placeholder="Daily goal in litres" value="' + esc(goalDraft === null ? fmtL(waterGoal) : goalDraft) + '" autocomplete="off"><span class="unit">L</span>' +
+        '<button class="btn ink" data-act="goal-save">Save</button></div>'
+      : '';
+    var water = '<div class="panel">' +
+      '<div class="w-top"><span class="w-val num">' + fmtL(ml) + '<small> of ' + fmtL(waterGoal) + ' L</small></span>' +
+      '<button class="link" data-act="goal-edit">' + (goalEdit ? "Cancel" : "Goal") + '</button></div>' +
+      '<div class="meter' + (ml >= waterGoal ? " full" : "") + '" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + wp + '"><span style="width:' + wp + '%"></span></div>' +
+      goalForm +
+      '<div class="w-btns"><button data-water="-250" aria-label="Remove 250 millilitres">−250</button>' +
+      '<button class="add" data-water="250">+250 ml</button><button class="add" data-water="500">+500 ml</button></div></div>';
+
+    // weight
+    var lw = lastWeight(sel);
+    var wval = weightDraft !== null ? weightDraft : (cur.weight != null ? String(cur.weight) : "");
+    var whint = cur.weight != null ? "Logged for " + dayLabel(sel).toLowerCase()
+      : (lw ? "Last weigh-in: " + lw.w + " kg · " + shortDate(lw.k) : "No weigh-ins yet");
+    var weight = '<div class="panel"><div class="row">' +
+      '<input class="field num" id="weight-input" inputmode="decimal" placeholder="Weight" value="' + esc(wval) + '" autocomplete="off" aria-label="Weight in kilograms"><span class="unit">kg</span>' +
+      '<button class="btn ink" data-act="weight-save">Save</button></div>' +
+      (weightErr ? '<div class="err">Enter a weight between 20 and 400 kg.</div>' : '') +
+      '<div class="hint">' + esc(whint) + '</div></div>';
+
+    var logHtml = cur.events.length
+      ? '<ul class="log">' + cur.events.slice().sort(function (a, b) { return b.t - a.t; }).map(function (e) {
+          var when = (sel === keyOf(new Date()) && !(e.kind === "meal" && e.label === "Pre-workout")) ? new Date(e.t).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "";
+          var name = e.kind === "meal" ? esc(e.label) : esc((PENALTY[e.kind] || PENALTY.slip).name + (e.label ? ": " + e.label : ""));
+          var off = !inPlan(sel, e);
+          return '<li><span class="badge' + (e.pts < 0 ? " bad" : "") + '"' + (off ? ' style="opacity:.45"' : '') + '>' + fmt(e.pts) + '</span>' +
+            '<span class="what">' + name + (off ? ' <span class="when">not in this plan</span>' : '') + (when ? ' <span class="when num">' + when + '</span>' : "") + '</span>' +
+            '<button class="rm" data-rm="' + e.id + '" aria-label="Remove entry">×</button></li>';
+        }).join("") + '</ul>'
+      : '<div class="empty">Nothing yet. Tick a meal you ate on plan to earn a point.</div>';
+
+    var wk = avgPct(weekKeys), al = avgPct(Object.keys(days));
+
+    var dnav = '<div class="dnav">' +
+      '<button data-snav="-7" aria-label="Previous week">\u2039</button>' +
+      '<input class="field" type="date" id="date-jump" value="' + sel + '" max="' + realToday + '" aria-label="Go to date">' +
+      '<button data-snav="7" aria-label="Next week"' + (stripEnd >= realToday ? " disabled" : "") + '>\u203A</button>' +
+      '<button class="todaybtn" data-act="go-today"' + (sel === realToday && stripEnd === realToday ? " disabled" : "") + '>Today</button></div>';
+
+    return dnav + '<div class="week">' + strip + '</div>' + types +
+      '<section class="hero"><div class="label">' + esc(dayLabel(sel)) + ' · ' + type.name + ' day</div>' +
+        '<div class="score ' + (cur.events.length ? pcls(p) : "") + '">' + p + '<span class="pc">%</span></div>' +
+        '<div class="state num">' + done + ' of ' + slots.length + ' meals' + (penalty ? ' · ' + fmt(penalty) + ' penalty' : '') + ' · ' + mood + '</div></section>' +
+      '<section><h2>Meals</h2><div class="meals">' + meals + '</div>' + pen + '</section>' +
+      '<section><h2>Water</h2>' + water + '</section>' +
+      '<section><h2>Weight</h2>' + weight + '</section>' +
+      '<section><h2>' + esc(dayLabel(sel)) + '’s log</h2>' + logHtml + '</section>' +
+      '<section class="totals">' +
+        '<div class="total"><div class="k">7-day average</div><div class="v num ' + (wk === null ? "" : pcls(wk)) + '">' + (wk === null ? "–" : wk + "%") + '</div></div>' +
+        '<div class="total"><div class="k">All-time average</div><div class="v num ' + (al === null ? "" : pcls(al)) + '">' + (al === null ? "–" : al + "%") + '</div></div>' +
+      '</section>' +
+      '<div class="foot">Saved on this device \u2014 it stays in this browser only.</div>';
+  }
+
+  // ---------- PROGRESS tab ----------
+  function rangeFor(kind, off) {
+    var t = new Date(); t.setHours(12, 0, 0, 0);
+    var start, end;
+    if (kind === "week") {
+      var dow = (t.getDay() + 6) % 7;                       // Monday = 0
+      start = new Date(t); start.setDate(t.getDate() - dow + off * 7);
+      end = new Date(start); end.setDate(start.getDate() + 6);
+    } else {
+      start = new Date(t.getFullYear(), t.getMonth() + off, 1, 12);
+      end = new Date(t.getFullYear(), t.getMonth() + off + 1, 0, 12);
+    }
+    var keys = [];
+    for (var d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) keys.push(keyOf(d));
+    return { keys: keys, start: start, end: end };
+  }
+
+  function stats(keys) {
+    var today = keyOf(new Date());
+    var s = { logged: [], elapsed: 0, pcts: [], avg: null, perfect: 0, slips: 0, drinks: 0, penPts: 0, byType: {}, meals: {}, water: [], weights: [] };
+    keys.forEach(function (k) {
+      if (k <= today) s.elapsed++;
+      var d = day(k);
+      if (d.weight != null) s.weights.push({ k: k, w: d.weight });
+      if (d.water > 0) s.water.push({ k: k, ml: d.water });
+      if (!d.events.length) return;
+      var p = pct(k);
+      s.logged.push(k); s.pcts.push(p);
+      if (p === 100) s.perfect++;
+      var bt = (s.byType[d.type] = s.byType[d.type] || { n: 0, sum: 0 }); bt.n++; bt.sum += p;
+      var eaten = {};
+      d.events.forEach(function (e) {
+        if (e.kind === "meal") eaten[e.label] = 1;
+        if (e.kind === "slip") s.slips++;
+        if (e.kind === "alcohol") s.drinks++;
+        if (e.pts < 0) s.penPts += e.pts;
+      });
+      DAY_TYPES[d.type].slots.forEach(function (sl) {
+        var m = (s.meals[sl] = s.meals[sl] || { done: 0, possible: 0 });
+        m.possible++; if (eaten[sl]) m.done++;
+      });
+    });
+    if (s.pcts.length) s.avg = Math.round(s.pcts.reduce(function (a, b) { return a + b; }, 0) / s.pcts.length);
+    return s;
+  }
+
+  // chart geometry (viewBox 340 x 166)
+  var CL = 30, CR = 336, CT = 10, CB = 140, CH = CB - CT;
+  function barPath(x, y, w, h, r) {
+    r = Math.min(r, h, w / 2);
+    return "M" + x + " " + (y + h) + "V" + (y + r) + "a" + r + " " + r + " 0 0 1 " + r + " " + (-r) + "H" + (x + w - r) + "a" + r + " " + r + " 0 0 1 " + r + " " + r + "V" + (y + h) + "Z";
+  }
+  function xLabel(k, kind) {
+    var d = fromKey(k);
+    if (kind === "week") return "MTWTFSS".charAt((d.getDay() + 6) % 7);
+    var n = d.getDate();
+    return (n === 1 || n % 5 === 0) ? String(n) : "";
+  }
+  function frame(keys, kind, ticks, label) {
+    var out = '<svg class="chart" viewBox="0 0 340 166" role="img" aria-label="' + esc(label) + '">';
+    ticks.forEach(function (t) {
+      out += '<line class="grid" x1="' + CL + '" x2="' + CR + '" y1="' + t.y + '" y2="' + t.y + '"/>' +
+        '<text class="ax" x="' + (CL - 6) + '" y="' + (t.y + 3) + '" text-anchor="end">' + t.l + '</text>';
+    });
+    var slot = (CR - CL) / keys.length;
+    var step = Math.max(1, Math.ceil(keys.length / 4));
+    keys.forEach(function (k, i) {
+      var l = kind === "range" ? (i % step === 0 ? fromKey(k).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "") : xLabel(k, kind);
+      var x = CL + slot * (i + .5);
+      if (l) out += '<text class="ax" x="' + x + '" y="158" text-anchor="' + (x > CR - 18 ? "end" : "middle") + '">' + l + '</text>';
+    });
+    return out;
+  }
+  function hitRects(keys) {
+    var slot = (CR - CL) / keys.length, out = "";
+    keys.forEach(function (k, i) {
+      out += '<rect class="hit" data-pk="' + k + '" tabindex="0" role="button" aria-label="' + esc(shortDate(k)) + '" x="' + (CL + slot * i) + '" y="' + CT + '" width="' + slot + '" height="' + (CH + 6) + '"/>';
+    });
+    return out;
+  }
+
+  // Diet heatmap: below 70% shades light red -> deep red, 70% and above shades light green -> deep green
+  var HEAT_SPLIT = 70;
+  function heat(p) {
+    var t, mix, base;
+    if (p >= HEAT_SPLIT) { t = (p - HEAT_SPLIT) / (100 - HEAT_SPLIT); base = "--good"; }
+    else { t = (HEAT_SPLIT - 1 - p) / (HEAT_SPLIT - 1); base = "--bad"; }
+    mix = Math.round(22 + 78 * Math.max(0, Math.min(1, t)));
+    return { cls: base === "--good" ? "hm-good" : "hm-bad",
+             style: "background:color-mix(in srgb, var(" + base + ") " + mix + "%, var(--surface-2));color:" + (mix > 55 ? "var(--surface)" : "var(--ink)") };
+  }
+  function heatmap(keys, kind) {
+    var today = keyOf(new Date());
+    var lead = kind === "month" ? (fromKey(keys[0]).getDay() + 6) % 7 : 0, cells = "";
+    for (var i = 0; i < lead; i++) cells += '<span class="hmblank"></span>';
+    keys.forEach(function (k) {
+      var d = day(k), has = d.events.length > 0, dn = fromKey(k).getDate(), sl = picked === k ? " sel" : "";
+      if (has) {
+        var p = pct(k), h = heat(p);
+        cells += '<button class="hm ' + h.cls + '" style="' + h.style + '" data-day="' + k + '" aria-label="Open ' + esc(shortDate(k)) + ', ' + p + ' percent"><i>' + dn + '</i><b class="num">' + p + '%</b></button>';
+      } else {
+        cells += '<button class="hm none' + (k > today ? " fut" : "") + '" data-day="' + k + '"' + (k > today ? " disabled" : "") + ' aria-label="' + (k > today ? "" : "Open ") + esc(shortDate(k)) + ', nothing logged"><i>' + dn + '</i></button>';
+      }
+    });
+    var head = "MTWTFSS".split("").map(function (c) { return "<span>" + c + "</span>"; }).join("");
+    return '<div class="hmhead">' + head + '</div><div class="hmgrid">' + cells + '</div>' +
+      '<div class="hmlegend"><div class="bars"><span class="r"></span><span class="g"></span></div>' +
+      '<div class="ticks"><span><em>0%</em><em>' + HEAT_SPLIT + '%</em></span><span>100%</span></div></div>';
+  }
+
+  // Generic line chart over the period's days. pts: [{k, v}]; o: {min, max, ticks:[{v,l}], goal, cls, fmt, label}
+  function lineChart(keys, kind, pts, o) {
+    var slot = (CR - CL) / keys.length;
+    function Y(v) { return CB - (v - o.min) / (o.max - o.min) * CH; }
+    var out = frame(keys, kind, o.ticks.map(function (t) { return { y: Y(t.v), l: t.l }; }), o.label);
+    if (o.goal != null) out += '<line class="goal" x1="' + CL + '" x2="' + CR + '" y1="' + Y(o.goal) + '" y2="' + Y(o.goal) + '"/>';
+    var pi = picked ? keys.indexOf(picked) : -1;
+    if (pi >= 0) { var px = CL + slot * (pi + .5); out += '<line class="pick" x1="' + px + '" x2="' + px + '" y1="' + CT + '" y2="' + CB + '"/>'; }
+    var xy = pts.map(function (p) { return { x: CL + slot * (keys.indexOf(p.k) + .5), y: Y(p.v), p: p }; });
+    if (xy.length > 1) out += '<polyline class="ln ln-' + o.cls + '" points="' + xy.map(function (q) { return q.x.toFixed(1) + "," + q.y.toFixed(1); }).join(" ") + '"/>';
+    xy.forEach(function (q) {
+      out += '<circle class="dt dt-' + o.cls + '" cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="' + (q.p.k === picked ? 5 : 4) + '"/>';
+    });
+    function lab(q, anchor) {
+      var ly = q.y - 9 < CT + 6 ? q.y + 17 : q.y - 9;
+      return '<text class="lab" x="' + q.x.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="' + anchor + '">' + o.fmt(q.p.v) + '</text>';
+    }
+    var f = xy[0], l = xy[xy.length - 1];
+    if (xy.length > 1 && l.x - f.x > 40) out += lab(f, f.x < CL + 14 ? "start" : "middle");
+    out += lab(l, l.x > CR - 16 ? "end" : "middle");
+    if (o.hitPoints) {
+      xy.forEach(function (q) {
+        out += '<circle class="hit" data-pk="' + q.p.k + '" tabindex="0" role="button" aria-label="' + esc(shortDate(q.p.k)) + '" cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="14"/>';
+      });
+      return out + '</svg>';
+    }
+    return out + hitRects(keys) + '</svg>';
+  }
+
+  function openBtn(keys) {
+    return (picked && keys.indexOf(picked) >= 0 && picked <= keyOf(new Date()))
+      ? '<div class="opendayrow"><button class="mini" data-day="' + picked + '">Add or edit this day</button></div>' : "";
+  }
+  function readout(keys, kind) {
+    if (!picked || keys.indexOf(picked) < 0) return kind === "score" ? "Tap a day for details" : "Tap a chart for details";
+    var d = day(picked), lab = shortDate(picked);
+    if (kind === "score") {
+      if (!d.events.length) return lab + " · nothing logged";
+      var slots = DAY_TYPES[d.type].slots, eaten = {};
+      d.events.forEach(function (e) { if (e.kind === "meal") eaten[e.label] = 1; });
+      return lab + " · " + DAY_TYPES[d.type].name + " · " + pct(picked) + "% · " + slots.filter(function (s) { return eaten[s]; }).length + "/" + slots.length + " meals";
+    }
+    if (kind === "water") return lab + " · " + (d.water ? fmtL(d.water) + " L" : "no water logged");
+    return lab + " · " + (d.weight != null ? d.weight + " kg" : "no weigh-in");
+  }
+
+  function renderProgress() {
+    var r = rangeFor(pKind, pOff), keys = r.keys, s = stats(keys);
+    var prev = stats(rangeFor(pKind, pOff - 1).keys);
+    var word = pKind === "week" ? "week" : "month";
+    var rlabel = pKind === "week"
+      ? r.start.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) + " – " + r.end.toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+      : r.start.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+    var rsub = pOff === 0 ? "This " + word : pOff === -1 ? "Last " + word : "";
+
+    var nav = '<div class="seg" role="group" aria-label="Period">' +
+      '<button data-pk-kind="week" aria-pressed="' + (pKind === "week") + '">Week</button>' +
+      '<button data-pk-kind="month" aria-pressed="' + (pKind === "month") + '">Month</button></div>' +
+      '<div class="pnav"><button data-poff="-1" aria-label="Previous ' + word + '">‹</button>' +
+      '<div class="plabel">' + esc(rlabel) + (rsub ? '<small>' + rsub + '</small>' : '<small>&nbsp;</small>') + '</div>' +
+      '<button data-poff="1" aria-label="Next ' + word + '"' + (pOff >= 0 ? " disabled" : "") + '>›</button></div>';
+
+    var delta = "";
+    if (s.avg !== null && prev.avg !== null) {
+      var df = s.avg - prev.avg;
+      delta = '<div class="delta ' + (df > 0 ? "pos" : df < 0 ? "neg" : "") + '">' + (df > 0 ? "▲ " : df < 0 ? "▼ " : "= ") + Math.abs(df) + ' pts vs previous ' + word + '</div>';
+    } else if (s.avg !== null) delta = '<div class="hint">No data in the previous ' + word + '</div>';
+
+    var hero = '<section class="hero"><div class="label">Average score</div>' +
+      '<div class="score ' + (s.avg === null ? "" : pcls(s.avg)) + '">' + (s.avg === null ? "–" : s.avg + '<span class="pc">%</span>') + '</div>' + delta + '</section>';
+
+    var stat3 = '<div class="stats3">' +
+      '<div class="stat"><div class="k">Perfect days</div><div class="v num">' + s.perfect + '</div></div>' +
+      '<div class="stat"><div class="k">Days logged</div><div class="v num">' + s.logged.length + '<small> / ' + s.elapsed + '</small></div></div>' +
+      '<div class="stat"><div class="k">Penalties</div><div class="v num ' + (s.penPts < 0 ? "neg" : "") + '">' + fmt(s.penPts) + '</div></div></div>';
+
+    var wRangeKeys = weightKeys();
+    var wKeys = wRangeKeys.filter(function (k) { return day(k).weight != null; }).sort().reverse();
+    var scoreSec = '<section><h2>Diet heatmap</h2>' + heatmap(keys, pKind) + '<div class="readout">Tap any day to add or edit its meals, water and weight.</div></section>';
+    if (!s.logged.length && !s.water.length && !wKeys.length) {
+      return nav + hero + scoreSec + '<div class="empty">Nothing logged in this ' + word + ' yet. Tap a day above to start.</div>';
+    }
+
+    // highlights
+    var hl = [];
+    if (s.logged.length) {
+      var best = s.logged.slice().sort(function (a, b) { return pct(b) - pct(a) || (a < b ? 1 : -1); })[0];
+      hl.push("Best day: " + shortDate(best) + " (" + pct(best) + "%)");
+      var mk = Object.keys(s.meals).filter(function (m) { return s.meals[m].possible >= 2; }).sort(function (a, b) {
+        return s.meals[a].done / s.meals[a].possible - s.meals[b].done / s.meals[b].possible;
+      });
+      if (mk.length) {
+        var m0 = mk[0], rate0 = Math.round(s.meals[m0].done / s.meals[m0].possible * 100);
+        hl.push(rate0 === 100 ? "You hit every planned meal." : "Most skipped meal: " + m0 + " (eaten " + rate0 + "% of the time)");
+      }
+      hl.push(s.drinks ? "Alcohol: " + s.drinks + (s.drinks === 1 ? " time" : " times") + " logged" : "No alcohol logged");
+      if (s.slips) hl.push("Off-diet items: " + s.slips);
+    }
+    var hlHtml = hl.length ? '<section><h2>Highlights</h2><ul class="hl">' + hl.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join("") + '</ul></section>' : "";
+
+    var mealRows = SLOT_ORDER.filter(function (m) { return s.meals[m]; }).map(function (m) {
+      var x = s.meals[m], p = Math.round(x.done / x.possible * 100);
+      return '<div class="adh"><span class="an">' + esc(m) + '<div class="sub2 num">' + x.done + ' of ' + x.possible + ' days</div></span>' +
+        '<span class="track"><span class="' + fcls(p) + '" style="width:' + p + '%"></span></span><span class="av num">' + p + '%</span></div>';
+    }).join("");
+    var mealSec = mealRows ? '<section><h2>How often you eat each meal</h2>' + mealRows + '</section>' : "";
+
+    var typeRows = TYPE_ORDER.filter(function (t) { return s.byType[t]; }).map(function (t) {
+      var x = s.byType[t], p = Math.round(x.sum / x.n);
+      return '<div class="adh"><span class="an">' + DAY_TYPES[t].name + '<div class="sub2 num">' + x.n + (x.n === 1 ? " day" : " days") + '</div></span>' +
+        '<span class="track"><span class="' + fcls(p) + '" style="width:' + p + '%"></span></span><span class="av num">' + p + '%</span></div>';
+    }).join("");
+    var typeSec = typeRows ? '<section><h2>Average by day type</h2>' + typeRows + '</section>' : "";
+
+    // water
+    var wSec;
+    if (s.water.length) {
+      var avgMl = Math.round(s.water.reduce(function (a, x) { return a + x.ml; }, 0) / s.water.length);
+      var hit = s.water.filter(function (x) { return x.ml >= waterGoal; }).length;
+      wSec = '<section><h2>Water</h2><div class="kv"><div><b class="num">' + fmtL(avgMl) + ' L</b>daily average</div>' +
+        '<div><b class="num">' + hit + ' / ' + s.water.length + '</b>days at goal (' + fmtL(waterGoal) + ' L)</div></div>' +
+        '<div class="chartbox">' + lineChart(keys, pKind, s.water.map(function (x) { return { k: x.k, v: x.ml }; }), {
+          min: 0, max: Math.ceil(Math.max(waterGoal, Math.max.apply(null, s.water.map(function (x) { return x.ml; }))) * 1.1 / 500) * 500,
+          ticks: [{ v: 0, l: "0" }, { v: waterGoal, l: fmtL(waterGoal) }], goal: waterGoal, cls: "water", fmt: fmtL, label: "Water intake per day in litres"
+        }) + '<div class="readout num">' + esc(readout(keys, "water")) + '</div>' + openBtn(keys) + '</div>' +
+        '<div class="hint" style="margin-top:6px">The thin horizontal line marks your daily goal (' + fmtL(waterGoal) + ' L).</div></section>';
+    } else wSec = '<section><h2>Water</h2><div class="empty">No water logged in this ' + word + '.</div></section>';
+
+    // weight: has its own range so a trend shows even when weigh-ins are days apart
+    var wpts = wKeys.slice().reverse().map(function (k) { return { k: k, v: day(k).weight }; });
+    var gSec = '<section><h2>Weight</h2><div class="seg" role="group" aria-label="Weight range">' +
+      [["30", "30 days"], ["90", "90 days"], ["all", "All time"]].map(function (r) {
+        return '<button data-wrange="' + r[0] + '" aria-pressed="' + (wRange === r[0]) + '">' + r[1] + '</button>';
+      }).join("") + '</div>';
+    if (wpts.length) {
+      var first = wpts[0].v, last = wpts[wpts.length - 1].v, ch = Math.round((last - first) * 10) / 10;
+      var lo = Math.min.apply(null, wpts.map(function (x) { return x.v; })), hi = Math.max.apply(null, wpts.map(function (x) { return x.v; }));
+      var pad = Math.max(0.5, (hi - lo) * 0.25);
+      gSec += '<div class="kv" style="margin-top:12px"><div><b class="num">' + last + ' kg</b>latest</div>' +
+        (wpts.length > 1 ? '<div><b class="num ' + (ch < 0 ? "pos" : ch > 0 ? "mid" : "") + '">' + (ch > 0 ? "+" : ch < 0 ? "−" : "") + Math.abs(ch) + ' kg</b>change</div>' : '') +
+        '<div><b class="num">' + wpts.length + '</b>' + (wpts.length === 1 ? "weigh-in" : "weigh-ins") + '</div></div>' +
+        '<div class="chartbox">' + lineChart(wRangeKeys, "range", wpts, {
+          min: lo - pad, max: hi + pad, cls: "ink", fmt: function (v) { return String(v); }, hitPoints: true, label: "Weight in kilograms over time",
+          ticks: lo === hi ? [{ v: lo, l: lo.toFixed(1) }] : [{ v: lo, l: lo.toFixed(1) }, { v: hi, l: hi.toFixed(1) }]
+        }) + '<div class="readout num">' + esc(readout(wRangeKeys, "weight")) + '</div>' + openBtn(wRangeKeys) + '</div>';
+      // weigh-in list: edit or delete
+      gSec += '<ul class="wl">' + wKeys.map(function (k) {
+        var d = day(k), ed = wEdit === k;
+        return '<li><div class="wrow"><span class="wd">' + esc(shortDate(k)) + '</span><span class="wv num">' + d.weight + ' kg</span>' +
+          '<button class="mini" data-wedit="' + k + '" aria-expanded="' + ed + '">' + (ed ? 'Close' : 'Edit') + '</button></div>' +
+          (ed ? '<div class="wedit"><div class="row"><input class="field num" id="wedit-input" inputmode="decimal" value="' + esc(wEditDraft) + '" autocomplete="off" aria-label="Weight in kilograms"><span class="unit">kg</span>' +
+            '<button class="btn ink" data-act="wedit-save">Save</button></div>' +
+            (wEditErr ? '<div class="err">Enter a weight between 20 and 400 kg.</div>' : '') +
+            '<div class="row"><button class="mini danger" style="flex:1" data-act="wedit-del">' + (wDelArm === k ? 'Tap again to delete this weigh-in' : 'Delete weigh-in') + '</button></div></div>' : '') + '</li>';
+      }).join("") + '</ul>';
+    } else gSec += '<div class="empty">No weigh-ins in this range. Add one on the Today tab.</div>';
+    gSec += '</section>';
+
+    return nav + hero + stat3 + hlHtml + scoreSec + mealSec + typeSec + wSec + gSec;
+  }
+
+  // ---------- shell ----------
+  function tabbar() {
+    return '<nav class="tabbar" aria-label="Sections"><div class="tabs">' +
+      '<button class="tab" data-tab="today" aria-pressed="' + (tab === "today") + '"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg>Today</button>' +
+      '<button class="tab" data-tab="progress" aria-pressed="' + (tab === "progress") + '"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Progress</button>' +
+      '</div></nav>';
+  }
+
+  // keepFocus: only for redraws that happen while the person may be typing (cloud updates)
+  function render(keepFocus) {
+    var ae = document.activeElement, aid = ae && ae.id, isIn = ae && ae.tagName === "INPUT", ss = null, se = null;
+    if (isIn) { try { ss = ae.selectionStart; se = ae.selectionEnd; } catch (e) {} }
+    try {
+      app.innerHTML = (tab === "today" ? renderToday() : renderProgress()) + tabbar();
+    } catch (err) {
+      try { console.error(err); } catch (e) {}
+      app.innerHTML = '<div class="empty">Something went wrong drawing this screen. <button class="mini" data-act="reload">Reload</button></div>' + tabbar();
+      return;
+    }
+    var target = focusId || (keepFocus && isIn ? aid : null);
+    if (target) {
+      var el = document.getElementById(target);
+      if (el) { el.focus(); if (!focusId && ss !== null) { try { el.setSelectionRange(ss, se); } catch (e) {} } }
+    }
+    focusId = null;
+  }
+
+  // ---------- events ----------
+  app.addEventListener("click", function (ev) {
+    // a tap on a button must never leave an input focused (on phones that keeps the keyboard open)
+    var act = document.activeElement;
+    if (act && act.tagName === "INPUT" && !ev.target.closest("input")) act.blur();
+    if (ev.target.closest('[data-act="reload"]')) { location.reload(); return; }
+    var pk = ev.target.closest("[data-pk]");
+    if (pk) { picked = picked === pk.dataset.pk ? null : pk.dataset.pk; render(); return; }
+    var b = ev.target.closest("button");
+    if (!b || b.disabled) return;
+    var ds = b.dataset;
+    if (ds.tab) { tab = ds.tab; picked = null; closeWeighEdit(); if (tab === "today") { selectDay(keyOf(new Date()), true); stripEnd = keyOf(new Date()); } render(); window.scrollTo(0, 0); return; }
+    if (ds.pkKind) { pKind = ds.pkKind; pOff = 0; picked = null; closeWeighEdit(); render(); return; }
+    if (ds.poff) { pOff = Math.min(0, pOff + parseInt(ds.poff, 10)); picked = null; closeWeighEdit(); render(); return; }
+    if (ds.wrange) { wRange = ds.wrange; picked = null; closeWeighEdit(); render(); return; }
+    if (ds.wedit) {
+      if (wEdit === ds.wedit) closeWeighEdit();
+      else { wEdit = ds.wedit; wEditDraft = String(day(ds.wedit).weight); wEditErr = false; wDelArm = null; focusId = "wedit-input"; }
+      render(); return;
+    }
+    if (ds.key) { selectDay(ds.key, false); render(); return; }
+    if (ds.snav) { stripEnd = shiftKey(stripEnd, parseInt(ds.snav, 10)); render(); return; }
+    if (ds.day) { openDay(ds.day); return; }
+    if (ds.type) { setType(ds.type); return; }
+    if (ds.meal) { toggleMeal(ds.meal); return; }
+    if (ds.rm) { removeEvent(ds.rm); return; }
+    if (ds.water) { addWater(parseInt(ds.water, 10)); return; }
+    if (ds.pen) { penOpen = ds.pen; penDraft = ""; focusId = "pen-text"; render(); return; }
+    switch (ds.act) {
+      case "pen-cancel": penOpen = null; penDraft = ""; render(); break;
+      case "pen-ok": submitPenalty(); break;
+      case "goal-edit": goalEdit = !goalEdit; goalDraft = null; if (goalEdit) focusId = "goal-input"; render(); break;
+      case "goal-save": saveGoal(); break;
+      case "go-today": selectDay(keyOf(new Date()), true); stripEnd = keyOf(new Date()); render(); break;
+      case "weight-save": saveWeight(); break;
+      case "wedit-save": saveWeighEdit(); break;
+      case "wedit-del": deleteWeigh(); break;
+    }
+  });
+  app.addEventListener("input", function (ev) {
+    var id = ev.target.id;
+    if (id === "pen-text") penDraft = ev.target.value;
+    else if (id === "weight-input") { weightDraft = ev.target.value; weightErr = false; }
+    else if (id === "goal-input") goalDraft = ev.target.value;
+    else if (id === "wedit-input") { wEditDraft = ev.target.value; wEditErr = false; }
+  });
+  app.addEventListener("keydown", function (ev) {
+    var id = ev.target.id;
+    if (ev.key === "Enter") {
+      if (id === "pen-text") { ev.preventDefault(); submitPenalty(); }
+      else if (id === "weight-input") { ev.preventDefault(); saveWeight(); }
+      else if (id === "goal-input") { ev.preventDefault(); saveGoal(); }
+      else if (id === "wedit-input") { ev.preventDefault(); saveWeighEdit(); }
+      else if (ev.target.dataset && ev.target.dataset.pk) { ev.preventDefault(); ev.target.dispatchEvent(new MouseEvent("click", { bubbles: true })); }
+    }
+  });
+  app.addEventListener("change", function (ev) {
+    if (ev.target.id !== "date-jump") return;
+    var v = ev.target.value;
+    ev.target.blur();
+    if (DATE_RE.test(v) && v <= keyOf(new Date())) selectDay(v, true);
+    render();
+  });
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) return;
+    var t = keyOf(new Date());
+    if (t !== lastToday) { if (sel === lastToday) sel = t; if (stripEnd === lastToday) stripEnd = t; lastToday = t; render(); }
+  });
+
+  render();
+})();
+</script>
+
+</body>
+</html>
