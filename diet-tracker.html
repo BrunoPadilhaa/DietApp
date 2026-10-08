@@ -9,11 +9,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #F1F5F1;
+    --bg: #FAFBF8;
     --surface: #FFFFFF;
-    --surface-2: #E6ECE6;
-    --line: #D5DED6;
-    --grid: #E1E8E2;
+    --surface-2: #EEF3EC;
+    --line: #DEE6DB;
+    --grid: #E7EDE4;
     --ink: #14211A;
     --muted: #5F7166;
     --good: #1B8A4B;
@@ -26,20 +26,6 @@
     --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
     --body: "DM Sans", "Segoe UI", system-ui, sans-serif;
     color-scheme: light;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #0E1611; --surface: #16211A; --surface-2: #1F2D24; --line: #2A3A30; --grid: #223027;
-      --ink: #E9F1EB; --muted: #8DA294; --good: #4FCB87; --good-soft: #173524; --bad: #FF7B6E; --bad-soft: #3A1F1C;
-      --warn: #E6B052; --water: #6DB4EA; --focus: #E9F1EB;
-      color-scheme: dark;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #0E1611; --surface: #16211A; --surface-2: #1F2D24; --line: #2A3A30; --grid: #223027;
-    --ink: #E9F1EB; --muted: #8DA294; --good: #4FCB87; --good-soft: #173524; --bad: #FF7B6E; --bad-soft: #3A1F1C;
-    --warn: #E6B052; --water: #6DB4EA; --focus: #E9F1EB;
-    color-scheme: dark;
   }
 
   html, body { background: var(--bg); }
