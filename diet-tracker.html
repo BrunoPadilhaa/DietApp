@@ -267,6 +267,7 @@
   var lastToday = keyOf(new Date());
   var sel = lastToday;
   var tab = "today", pKind = "week", pOff = 0, picked = null;
+  var pCustomFrom = null, pCustomTo = null; // "custom" period range
   var penOpen = null, penDraft = "", focusId = null;
   var goalEdit = false, goalDraft = null, weightDraft = null, weightErr = false;
   var wEdit = null, wEditDraft = "", wEditErr = false, wDelArm = null;
@@ -543,7 +544,11 @@
   function rangeFor(kind, off) {
     var t = new Date(); t.setHours(12, 0, 0, 0);
     var start, end;
-    if (kind === "week") {
+    if (kind === "custom") {
+      start = fromKey(pCustomFrom || keyOf(t));
+      end = fromKey(pCustomTo || keyOf(t));
+      if (start > end) { var tmp = start; start = end; end = tmp; }
+    } else if (kind === "week") {
       var dow = (t.getDay() + 6) % 7;                       // Monday = 0
       start = new Date(t); start.setDate(t.getDate() - dow + off * 7);
       end = new Date(start); end.setDate(start.getDate() + 6);
@@ -606,7 +611,7 @@
     var slot = (CR - CL) / keys.length;
     var step = Math.max(1, Math.ceil(keys.length / 4));
     keys.forEach(function (k, i) {
-      var l = kind === "range" ? (i % step === 0 ? fromKey(k).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "") : xLabel(k, kind);
+      var l = (kind === "range" || kind === "custom") ? (i % step === 0 ? fromKey(k).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "") : xLabel(k, kind);
       var x = CL + slot * (i + .5);
       if (l) out += '<text class="ax" x="' + x + '" y="158" text-anchor="' + (x > CR - 18 ? "end" : "middle") + '">' + l + '</text>';
     });
@@ -632,7 +637,7 @@
   }
   function heatmap(keys, kind) {
     var today = keyOf(new Date());
-    var lead = kind === "month" ? (fromKey(keys[0]).getDay() + 6) % 7 : 0, cells = "";
+    var lead = (kind === "month" || kind === "custom") ? (fromKey(keys[0]).getDay() + 6) % 7 : 0, cells = "";
     for (var i = 0; i < lead; i++) cells += '<span class="hmblank"></span>';
     keys.forEach(function (k) {
       var d = day(k), has = d.events.length > 0, dn = fromKey(k).getDate(), sl = picked === k ? " sel" : "";
@@ -696,26 +701,37 @@
   }
 
   function renderProgress() {
+    var realToday = keyOf(new Date());
     var r = rangeFor(pKind, pOff), keys = r.keys, s = stats(keys);
-    var prev = stats(rangeFor(pKind, pOff - 1).keys);
-    var word = pKind === "week" ? "week" : "month";
-    var rlabel = pKind === "week"
-      ? r.start.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) + " – " + r.end.toLocaleDateString("en-GB", { day: "numeric", month: "short" })
-      : r.start.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
-    var rsub = pOff === 0 ? "This " + word : pOff === -1 ? "Last " + word : "";
+    var word = pKind === "week" ? "week" : pKind === "month" ? "month" : "period";
+    var prev = pKind === "custom" ? null : stats(rangeFor(pKind, pOff - 1).keys);
 
-    var nav = '<div class="seg" role="group" aria-label="Period">' +
+    var navKinds = '<div class="seg" role="group" aria-label="Period">' +
       '<button data-pk-kind="week" aria-pressed="' + (pKind === "week") + '">Week</button>' +
-      '<button data-pk-kind="month" aria-pressed="' + (pKind === "month") + '">Month</button></div>' +
-      '<div class="pnav"><button data-poff="-1" aria-label="Previous ' + word + '">‹</button>' +
-      '<div class="plabel">' + esc(rlabel) + (rsub ? '<small>' + rsub + '</small>' : '<small>&nbsp;</small>') + '</div>' +
-      '<button data-poff="1" aria-label="Next ' + word + '"' + (pOff >= 0 ? " disabled" : "") + '>›</button></div>';
+      '<button data-pk-kind="month" aria-pressed="' + (pKind === "month") + '">Month</button>' +
+      '<button data-pk-kind="custom" aria-pressed="' + (pKind === "custom") + '">Custom</button></div>';
+
+    var nav;
+    if (pKind === "custom") {
+      nav = navKinds + '<div class="dnav" style="margin-top:8px">' +
+        '<input class="field" type="date" id="custom-from" value="' + esc(pCustomFrom || "") + '" max="' + realToday + '" aria-label="Start date">' +
+        '<span class="unit">–</span>' +
+        '<input class="field" type="date" id="custom-to" value="' + esc(pCustomTo || "") + '" max="' + realToday + '" aria-label="End date"></div>';
+    } else {
+      var rlabel = pKind === "week"
+        ? r.start.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) + " – " + r.end.toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+        : r.start.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+      var rsub = pOff === 0 ? "This " + word : pOff === -1 ? "Last " + word : "";
+      nav = navKinds + '<div class="pnav"><button data-poff="-1" aria-label="Previous ' + word + '">‹</button>' +
+        '<div class="plabel">' + esc(rlabel) + (rsub ? '<small>' + rsub + '</small>' : '<small>&nbsp;</small>') + '</div>' +
+        '<button data-poff="1" aria-label="Next ' + word + '"' + (pOff >= 0 ? " disabled" : "") + '>›</button></div>';
+    }
 
     var delta = "";
-    if (s.avg !== null && prev.avg !== null) {
+    if (prev && s.avg !== null && prev.avg !== null) {
       var df = s.avg - prev.avg;
       delta = '<div class="delta ' + (df > 0 ? "pos" : df < 0 ? "neg" : "") + '">' + (df > 0 ? "▲ " : df < 0 ? "▼ " : "= ") + Math.abs(df) + ' pts vs previous ' + word + '</div>';
-    } else if (s.avg !== null) delta = '<div class="hint">No data in the previous ' + word + '</div>';
+    } else if (prev && s.avg !== null) delta = '<div class="hint">No data in the previous ' + word + '</div>';
 
     var hero = '<section class="hero"><div class="label">Average score</div>' +
       '<div class="score ' + (s.avg === null ? "" : pcls(s.avg)) + '">' + (s.avg === null ? "–" : s.avg + '<span class="pc">%</span>') + '</div>' + delta + '</section>';
@@ -855,7 +871,11 @@
     if (!b || b.disabled) return;
     var ds = b.dataset;
     if (ds.tab) { tab = ds.tab; picked = null; closeWeighEdit(); if (tab === "today") { selectDay(keyOf(new Date()), true); stripEnd = keyOf(new Date()); } render(); window.scrollTo(0, 0); return; }
-    if (ds.pkKind) { pKind = ds.pkKind; pOff = 0; picked = null; closeWeighEdit(); render(); return; }
+    if (ds.pkKind) {
+      pKind = ds.pkKind; pOff = 0; picked = null; closeWeighEdit();
+      if (pKind === "custom" && !pCustomFrom) { var t = keyOf(new Date()); pCustomFrom = shiftKey(t, -6); pCustomTo = t; }
+      render(); return;
+    }
     if (ds.poff) { pOff = Math.min(0, pOff + parseInt(ds.poff, 10)); picked = null; closeWeighEdit(); render(); return; }
     if (ds.wrange) { wRange = ds.wrange; picked = null; closeWeighEdit(); render(); return; }
     if (ds.wedit) {
@@ -906,6 +926,15 @@
       var f = ev.target.files && ev.target.files[0];
       ev.target.value = "";
       if (f) importData(f);
+      return;
+    }
+    if (ev.target.id === "custom-from" || ev.target.id === "custom-to") {
+      var cv = ev.target.value;
+      if (DATE_RE.test(cv) && cv <= keyOf(new Date())) {
+        if (ev.target.id === "custom-from") pCustomFrom = cv; else pCustomTo = cv;
+        if (pCustomFrom && pCustomTo && pCustomFrom > pCustomTo) { var tmp = pCustomFrom; pCustomFrom = pCustomTo; pCustomTo = tmp; }
+        picked = null; render();
+      }
       return;
     }
     if (ev.target.id !== "date-jump") return;
